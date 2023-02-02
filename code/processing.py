@@ -8,7 +8,7 @@ from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 from pyspark.sql.functions import pandas_udf
 from pyspark.sql.types import DoubleType, TimestampType
-import shutil
+from subprocess import PIPE, Popen
 import traceback
 
 BASE_PATH = os.path.join("/", "opt", "ml")
@@ -36,6 +36,12 @@ class HDFSManager:
             .get(sc._jsc.hadoopConfiguration())
 
         self.hdfs_path = spark.sparkContext._jsc.hadoopConfiguration().get("fs.defaultFS")
+        
+        logger.info("Creating /tmp folder in HDFS")
+        
+        put = Popen(["hadoop", "fs", "-mkdir", "-p", os.path.join(self.hdfs_path, "tmp")], stdin=PIPE, bufsize=-1)
+        put.communicate()
+        
         
     def save_df(self, df, file, separator=","):
         try:
@@ -71,6 +77,27 @@ class HDFSManager:
             logger.error(stacktrace)
 
             raise e
+    
+    ## This method allows you to copy files from local file system to HDFS
+    #
+    def full_copy(self, path):
+        try:
+            logger.info("EBS files: {}".format(os.listdir(path)))
+            
+            if os.path.isdir(path):
+                self.files = [f for f in os.listdir(path)]
+
+                for file in self.files:
+                    logger.info("Copy {} in HDFS {}".format(os.path.join(path, file), os.path.join(self.hdfs_path, "tmp", file)))
+
+                    put = Popen(["hadoop", "fs", "-put", os.path.join(path, file), os.path.join(self.hdfs_path, "tmp", file)], stdin=PIPE, bufsize=-1)
+                    put.communicate()                       
+        except Exception as e:
+            stacktrace = traceback.format_exc()
+
+            logger.error(stacktrace)
+
+            raise e
 
 ## Spark Initializer
 #
@@ -96,10 +123,17 @@ if __name__ == '__main__':
     
     hdfs_manager = HDFSManager(spark)
     
-    df_e = spark.read.csv(
-        f"s3://{args.bucket_name}/{args.processing_input_files_path}/energy_dataset.csv",
-        header=True
-    )
+    ## Move ProcessingInputs to HDFS
+    if args.copy_hdfs == "1":
+        hdfs_manager.full_copy(PROCESSING_PATH_INPUT)
+    
+    if args.copy_hdfs == "0":
+        df_e = spark.read.csv(
+            f"s3://{args.bucket_name}/{args.processing_input_files_path}/energy_dataset.csv",
+            header=True
+        )
+    else:
+        df_e = hdfs_manager.load_df(spark, "energy_dataset.csv")
     
     columns_to_drop = [
         'generation fossil coal-derived gas',
@@ -135,11 +169,14 @@ if __name__ == '__main__':
     ## Save DataFrame in HDFS
     if args.copy_hdfs == "1":
         hdfs_manager.save_df(df_e, "energy_dataset_df")
-    
-    df_w = spark.read.csv(
-        f"s3://{args.bucket_name}/{args.processing_input_files_path}/weather_features.csv",
-        header=True
-    )
+        
+    if args.copy_hdfs == "0":
+        df_w = spark.read.csv(
+            f"s3://{args.bucket_name}/{args.processing_input_files_path}/weather_features.csv",
+            header=True
+        )
+    else:
+        df_w = hdfs_manager.load_df(spark, "weather_features.csv")
     
     for c in df_w.columns:
         if c != "dt_iso":
