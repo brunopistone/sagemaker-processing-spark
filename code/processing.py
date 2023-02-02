@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 class HDFSManager:
     def __init__(self, spark):
         sc = spark.sparkContext
-        self.files = []
         self.URI = sc._gateway.jvm.java.net.URI
         self.Path = sc._gateway.jvm.org.apache.hadoop.fs.Path
         self.FileSystem = sc._gateway.jvm.org.apache.hadoop.fs.FileSystem
@@ -85,9 +84,9 @@ class HDFSManager:
             logger.info("EBS files: {}".format(os.listdir(path)))
             
             if os.path.isdir(path):
-                self.files = [f for f in os.listdir(path)]
+                files = [f for f in os.listdir(path)]
 
-                for file in self.files:
+                for file in files:
                     logger.info("Copy {} in HDFS {}".format(os.path.join(path, file), os.path.join(self.hdfs_path, "tmp", file)))
 
                     put = Popen(["hadoop", "fs", "-put", os.path.join(path, file), os.path.join(self.hdfs_path, "tmp", file)], stdin=PIPE, bufsize=-1)
