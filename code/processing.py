@@ -38,18 +38,18 @@ class HDFSManager:
         
         logger.info("Creating /tmp folder in HDFS")
         
-        put = Popen(["hadoop", "fs", "-mkdir", "-p", os.path.join(self.hdfs_path, "tmp")], stdin=PIPE, bufsize=-1)
+        put = Popen(["hdfs", "dfs", "-mkdir", "-p", os.path.join(self.hdfs_path, "tmp")], stdin=PIPE, bufsize=-1)
         put.communicate()
         
         
-    def save_df(self, df, file, separator=","):
+    def save_df(self, df, file, separator=",", header=True, quote='"'):
         try:
             logger.info("Saving {} in path {}".format(file, os.path.join(self.hdfs_path, "tmp", file)))
-            df.write \
+            df.repartition(1).write \
                 .format("com.databricks.spark.csv") \
                 .mode('overwrite') \
-                .option("quote", '"') \
-                .option("header", True) \
+                .option("quote", quote) \
+                .option("header", header) \
                 .option("sep", separator) \
                 .csv("{}".format(os.path.join(self.hdfs_path, "tmp", file)))
 
@@ -79,7 +79,7 @@ class HDFSManager:
     
     ## This method allows you to copy files from local file system to HDFS
     #
-    def full_copy(self, path):
+    def copy_full_to_hdfs(self, path):
         try:
             logger.info("EBS files: {}".format(os.listdir(path)))
             
@@ -89,8 +89,38 @@ class HDFSManager:
                 for file in files:
                     logger.info("Copy {} in HDFS {}".format(os.path.join(path, file), os.path.join(self.hdfs_path, "tmp", file)))
 
-                    put = Popen(["hadoop", "fs", "-put", os.path.join(path, file), os.path.join(self.hdfs_path, "tmp", file)], stdin=PIPE, bufsize=-1)
+                    put = Popen(["hdfs", "dfs", "-put", os.path.join(path, file), os.path.join(self.hdfs_path, "tmp", file)], stdin=PIPE, bufsize=-1)
                     put.communicate()                       
+        except Exception as e:
+            stacktrace = traceback.format_exc()
+
+            logger.error(stacktrace)
+
+            raise e
+            
+    ## This method allows you to copy a selected file from local file system to HDFS
+    #
+    def copy_to_hdfs(self, path, file):
+        try:
+            logger.info("Copy file from {} to HDFS".format(os.path.join(path, file)))
+            
+            put = Popen(["hdfs", "dfs", "-put", os.path.join(path, file), os.path.join(self.hdfs_path, "tmp", file)], stdin=PIPE, bufsize=-1)
+            put.communicate()                  
+        except Exception as e:
+            stacktrace = traceback.format_exc()
+
+            logger.error(stacktrace)
+
+            raise e
+            
+    ## This method allows you to copy a selected file from HDFS to local file system
+    #
+    def copy_from_hdfs(self, path, file):
+        try:
+            logger.info("Copy file from HDFS to {}".format(os.path.join(path, file)))
+            
+            put = Popen(["hdfs", "dfs", "-copyToLocal", os.path.join(self.hdfs_path, "tmp", file), os.path.join(path, file)], stdin=PIPE, bufsize=-1)
+            put.communicate()                  
         except Exception as e:
             stacktrace = traceback.format_exc()
 
@@ -103,12 +133,6 @@ class HDFSManager:
 spark = SparkSession.builder \
     .config("spark.sql.legacy.timeParserPolicy", "CORRECTED") \
     .getOrCreate()
-
-def interpolate(pdf):
-    pdf = pdf.set_index('time')
-    pdf.interpolate(method='linear', limit_direction='forward', inplace=True, axis=0)
-    pdf.reset_index(inplace=True)
-    return pdf
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -124,7 +148,7 @@ if __name__ == '__main__':
     
     ## Move ProcessingInputs to HDFS
     if args.copy_hdfs == "1":
-        hdfs_manager.full_copy(PROCESSING_PATH_INPUT)
+        hdfs_manager.copy_full_to_hdfs(PROCESSING_PATH_INPUT)
     
     if args.copy_hdfs == "0":
         df_e = spark.read.csv(
@@ -159,35 +183,43 @@ if __name__ == '__main__':
         .select([F.count(F.when(F.isnan(c) | F.col(c).isNull(), c)).alias(c) for c in df_e.schema.names if c != "time"]) \
         .toPandas()
     
+    def interpolate(pdf):
+        pdf = pdf.set_index('time')
+        pdf.interpolate(method='linear', limit_direction='forward', inplace=True, axis=0)
+        pdf.reset_index(inplace=True)
+        return pdf
+    
     df_e_p = df_e.toPandas()
     df_e_p = interpolate(df_e_p)
     df_e = spark.createDataFrame(df_e_p)
     
-    df_e.show(1)
-    
-    ## Save DataFrame in HDFS
-    if args.copy_hdfs == "1":
-        hdfs_manager.save_df(df_e, "energy_dataset_df")
+    logger.info("Shape: ({},{})".format(df_e.count(), len(df_e.columns)))
         
-    if args.copy_hdfs == "0":
+    if args.copy_hdfs == "1":
+        df_w = hdfs_manager.load_df(spark, "weather_features.csv")
+    else:
         df_w = spark.read.csv(
             f"s3://{args.bucket_name}/{args.processing_input_files_path}/weather_features.csv",
             header=True
         )
-    else:
-        df_w = hdfs_manager.load_df(spark, "weather_features.csv")
-    
+        
+    columns = ["city_name", "weather_id", "weather_main", "weather_description", "weather_icon", "dt_iso"]
+
     for c in df_w.columns:
-        if c != "dt_iso":
+        if c not in columns:
             df_w = df_w.withColumn(c, df_w[c].cast(DoubleType()))
             
     df_w = df_w.withColumn("time", F.to_timestamp("dt_iso", "yyyy-MM-dd HH:mm:ssVV"))
     
     df_w = df_w.drop("dt_iso")
     
+    ## Remove duplicates
+    
+    df_w.distinct().groupby("city_name").count().show()
+    
     df_w = df_w.orderBy("time").coalesce(1).dropDuplicates(subset = ["city_name", "time"])
     
-    df_w.show(1)
+    df_w.distinct().groupby("city_name").count().show()
     
     df_w_barcelona = df_w.filter(F.col("city_name") == " Barcelona")
     df_w_bilbao = df_w.filter(F.col("city_name") == "Bilbao")
@@ -201,9 +233,8 @@ if __name__ == '__main__':
     df_w_seville = df_w_seville.select([F.col(c).alias(c + "_seville") for c in df_w_seville.columns]).drop("city_name_seville")
     df_w_valencia = df_w_valencia.select([F.col(c).alias(c + "_valencia") for c in df_w_valencia.columns]).drop("city_name_valencia")
     
-    ## Load DataFrame from HDFS
-    if args.copy_hdfs == "1":
-        df_e = hdfs_manager.load_df(spark, "energy_dataset_df")
+    
+    logger.info("Join energy_dataset_df with weather_features_df")
     
     df_e = df_e.join(df_w_barcelona, df_e.time == df_w_barcelona.time_barcelona, how='full').drop("time_barcelona")
     df_e = df_e.join(df_w_bilbao, df_e.time == df_w_bilbao.time_bilbao, how='full').drop("time_bilbao")
@@ -213,11 +244,17 @@ if __name__ == '__main__':
     
     logger.info("Writing output file {} to {}".format("energy_full.csv", f"s3://{args.bucket_name}/{args.processing_output_files_path}"))
     
-    df_e.repartition(1).write \
-        .format("com.databricks.spark.csv") \
-        .mode('overwrite') \
-        .option("quote", '"') \
-        .option("header", True) \
-        .option("sep", ",") \
-        .option('encoding', 'UTF-8') \
-        .save(f"s3://{args.bucket_name}/{args.processing_output_files_path}/energy_full.csv",)
+    if args.copy_hdfs == "1":
+        ## Save DataFrame in HDFS
+        hdfs_manager.save_df(df_e, "energy_full")
+        hdfs_manager.copy_from_hdfs(PROCESSING_PATH_OUTPUT, "energy_full")
+    else:
+        ## Or save directly on S3
+        df_e.repartition(1).write \
+            .format("com.databricks.spark.csv") \
+            .mode('overwrite') \
+            .option("quote", '"') \
+            .option("header", True) \
+            .option("sep", ",") \
+            .option('encoding', 'UTF-8') \
+            .save(f"s3://{args.bucket_name}/{args.processing_output_files_path}/energy_full.csv")
