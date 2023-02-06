@@ -1,3 +1,31 @@
+# Most of the content is taken from https://github.com/github/gitignore/blob/master/Python.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs
+**/logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -101,15 +129,6 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -128,4 +147,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-.DS_Store
+*/**/venv
+*/**/locals
+*/**/*.egg-info
+*/**/default.profraw
