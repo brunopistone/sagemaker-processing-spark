@@ -23,10 +23,6 @@ spark = SparkSession.builder \
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--copy_hdfs", type=str, default="0")
-    parser.add_argument("--bucket_name", type=str, help="s3 input bucket")
-    parser.add_argument("--processing_input_files_path", type=str, help="s3 input key prefix")
-    parser.add_argument("--processing_output_files_path", type=str, help="s3 output bucket")
     args = parser.parse_args()
 
     logger.info("Arguments: {}".format(args))
@@ -34,16 +30,10 @@ if __name__ == '__main__':
     hdfs_manager = scripts.services.HDFSManager.HDFSManager(spark)
     
     ## Move ProcessingInputs to HDFS
-    if args.copy_hdfs == "1":
-        hdfs_manager.copy_full_to_hdfs(PROCESSING_PATH_INPUT)
+    hdfs_manager.copy_full_to_hdfs(PROCESSING_PATH_INPUT)
+        
     
-    if args.copy_hdfs == "0":
-        df_e = spark.read.csv(
-            f"s3://{args.bucket_name}/{args.processing_input_files_path}/energy_dataset.csv",
-            header=True
-        )
-    else:
-        df_e = hdfs_manager.load_df(spark, "energy_dataset.csv")
+    df_e = hdfs_manager.load_df(spark, "energy_dataset.csv")
     
     columns_to_drop = [
         'generation fossil coal-derived gas',
@@ -82,13 +72,7 @@ if __name__ == '__main__':
     
     logger.info("Shape: ({},{})".format(df_e.count(), len(df_e.columns)))
         
-    if args.copy_hdfs == "1":
-        df_w = hdfs_manager.load_df(spark, "weather_features.csv")
-    else:
-        df_w = spark.read.csv(
-            f"s3://{args.bucket_name}/{args.processing_input_files_path}/weather_features.csv",
-            header=True
-        )
+    df_w = hdfs_manager.load_df(spark, "weather_features.csv")
         
     columns = ["city_name", "weather_id", "weather_main", "weather_description", "weather_icon", "dt_iso"]
 
@@ -129,19 +113,7 @@ if __name__ == '__main__':
     df_e = df_e.join(df_w_seville, df_e.time == df_w_seville.time_seville, how='full').drop("time_seville")
     df_e = df_e.join(df_w_valencia, df_e.time == df_w_valencia.time_valencia, how='full').drop("time_valencia")
     
-    logger.info("Writing output file {} to {}".format("energy_full.csv", f"s3://{args.bucket_name}/{args.processing_output_files_path}"))
+    logger.info("Writing output file {} to {}".format("energy_full.csv", PROCESSING_PATH_OUTPUT))
     
-    if args.copy_hdfs == "1":
-        ## Save DataFrame in HDFS
-        hdfs_manager.save_df(df_e, "energy_full")
-        hdfs_manager.copy_from_hdfs(PROCESSING_PATH_OUTPUT, "energy_full")
-    else:
-        ## Or save directly on S3
-        df_e.repartition(1).write \
-            .format("com.databricks.spark.csv") \
-            .mode('overwrite') \
-            .option("quote", '"') \
-            .option("header", True) \
-            .option("sep", ",") \
-            .option('encoding', 'UTF-8') \
-            .save(f"s3://{args.bucket_name}/{args.processing_output_files_path}/energy_full.csv")
+    hdfs_manager.save_df(df_e, "energy_full")
+    hdfs_manager.copy_from_hdfs(PROCESSING_PATH_OUTPUT, "energy_full")
