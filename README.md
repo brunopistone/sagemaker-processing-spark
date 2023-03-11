@@ -8,6 +8,38 @@ Upload data in your bucket
 aws s3 cp ./data/* s3://<BUCKET_NAME>/<SUFFIX>/ --recursive
 ```
 
+---
+
+## HDFSManager
+
+This example is providing an utility class [HDFSManager](./code/services/HDFSManager.py) for managing data from and to HDFS.
+
+### Copy files from local file system to HDFS
+
+```
+hdfs_manager.copy_full_to_hdfs(<LOCAL_PATH>)
+```
+
+### Copy files from HDFS to local file system
+
+```
+hdfs_manager.copy_from_hdfs(<LOCAL_FILE_SYSTEM>, <HDFS_FILE_NAME>)
+```
+
+### Read file from HDFS into a Spark DataFrame
+
+```
+df = hdfs_manager.load_df(<SPARK_CONTEXT, <FILE_NAME>)
+```
+
+### Save Spark DataFrame to HDFS
+
+```
+hdfs_manager.save_df(df, <FILE_NAME>)
+```
+
+---
+
 ## Build Docker Image
 
 ### Create ECR Repository
