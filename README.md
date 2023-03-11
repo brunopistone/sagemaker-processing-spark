@@ -29,7 +29,7 @@ hdfs_manager.copy_from_hdfs(<LOCAL_FILE_SYSTEM>, <HDFS_FILE_NAME>)
 ### Read file from HDFS into a Spark DataFrame
 
 ```
-df = hdfs_manager.load_df(<SPARK_CONTEXT, <FILE_NAME>)
+df = hdfs_manager.load_df(<SPARK_CONTEXT>, <FILE_NAME>)
 ```
 
 ### Save Spark DataFrame to HDFS
