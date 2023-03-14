@@ -87,7 +87,7 @@ docker build -t <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:$
 ### Push Image to ECR
 
 ```
-aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME} | docker push <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:${IMAGE_TAG}
+docker push <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:${IMAGE_TAG}
 ```
 
 * ACCOUNT_ID: AWS Account ID
