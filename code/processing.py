@@ -1,10 +1,9 @@
 import argparse
-import csv
 import logging
 import os
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
-from pyspark.sql.types import DoubleType, TimestampType
+from pyspark.sql.types import DoubleType
 import scripts.services.HDFSManager
 
 BASE_PATH = os.path.join("/", "opt", "ml")
@@ -31,9 +30,8 @@ if __name__ == '__main__':
     
     ## Move ProcessingInputs to HDFS
     hdfs_manager.copy_full_to_hdfs(PROCESSING_PATH_INPUT)
-        
-    
-    df_e = hdfs_manager.load_df(spark, "energy_dataset.csv")
+
+    df_e = hdfs_manager.load_df(spark, "energy_dataset")
     
     columns_to_drop = [
         'generation fossil coal-derived gas',
@@ -72,7 +70,7 @@ if __name__ == '__main__':
     
     logger.info("Shape: ({},{})".format(df_e.count(), len(df_e.columns)))
         
-    df_w = hdfs_manager.load_df(spark, "weather_features.csv")
+    df_w = hdfs_manager.load_df(spark, "weather_features")
         
     columns = ["city_name", "weather_id", "weather_main", "weather_description", "weather_icon", "dt_iso"]
 

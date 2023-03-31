@@ -52,6 +52,7 @@ class HDFSManager:
             logger.info("Loading {} from path {}".format(file, os.path.join(self.hdfs_path, "tmp", file)))
             
             df = spark_session.read \
+                .option("recursiveFileLookup", "true") \
                 .option("header", True) \
                 .option("sep", separator) \
                 .csv("{}".format(os.path.join(self.hdfs_path, "tmp", file)))
@@ -107,7 +108,7 @@ class HDFSManager:
             logger.info("Copy file from HDFS to {}".format(os.path.join(path, file)))
             
             put = Popen(["hdfs", "dfs", "-copyToLocal", os.path.join(self.hdfs_path, "tmp", file), os.path.join(path, file)], stdin=PIPE, bufsize=-1)
-            put.communicate()                  
+            put.communicate()
         except Exception as e:
             stacktrace = traceback.format_exc()
 
