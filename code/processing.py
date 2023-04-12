@@ -20,6 +20,17 @@ spark = SparkSession.builder \
     .config("spark.sql.legacy.timeParserPolicy", "CORRECTED") \
     .getOrCreate()
 
+logger.info("##################")
+sc = spark.sparkContext
+logger.info("Spark Configurations:")
+logger.info("spark.executor.cores: {}".format(sc._conf.get("spark.executor.cores")))
+logger.info("spark.executor.memory: {}".format(sc._conf.get("spark.executor.memory")))
+logger.info("spark.executor.memoryOverhead: {}".format(sc._conf.get("spark.executor.memoryOverhead")))
+logger.info("spark.executor.instances: {}".format(sc._conf.get("spark.executor.instances")))
+logger.info("spark.driver.memory: {}".format(sc._conf.get("spark.driver.memory")))
+logger.info("spark.driver.cores: {}".format(sc._conf.get("spark.driver.cores")))
+logger.info("##################")
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     args = parser.parse_args()

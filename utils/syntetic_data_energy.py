@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 
-num_samples = 35000
+num_samples = 10000000
 num_shards = 50
 
 if __name__ == "__main__":
@@ -26,12 +26,12 @@ if __name__ == "__main__":
     new_data = pd.DataFrame(np.random.rand(num_samples, len(X.columns)), columns=X.columns)
 
     # # Add a new timestamp column to the new_data DataFrame
-    start_date = pd.to_datetime(data['time'].min())
+    start_date = pd.to_datetime("1980-01-01 00:00:00+01:00")
     end_date = pd.to_datetime(data['time'].max())
 
-    new_times = pd.date_range(start=end_date,
+    new_times = pd.date_range(start=start_date,
                               periods=num_samples,
-                              freq='1H')
+                              freq='5T')
 
     new_data['time'] = new_times
 
@@ -48,12 +48,12 @@ if __name__ == "__main__":
     # Make the time column the first column in the dataframe
     new_data = new_data.reindex(columns=['time'] + [col for col in new_data.columns if col != 'time'])
 
-    new_data = new_data.iloc[1:]
+    # new_data = new_data.iloc[1:]
 
-    final_df = pd.concat([data, new_data])
+    # final_df = pd.concat([data, new_data])
 
     # Split dataframe into shards
-    shards = np.array_split(final_df, num_shards)
+    shards = np.array_split(new_data, num_shards)
 
     for i, shard in enumerate(shards):
         shard_path = os.path.join("./../data/output/energy_dataset", f"part-{i}")

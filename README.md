@@ -5,7 +5,7 @@
 Upload data in your bucket
 
 ```
-aws s3 cp ./data/* s3://<BUCKET_NAME>/electricity-forecasting/data/input/ --recursive
+aws s3 cp ./data/output/* s3://<BUCKET_NAME>/electricity-forecasting/data/input/ --recursive
 ```
 
 ---

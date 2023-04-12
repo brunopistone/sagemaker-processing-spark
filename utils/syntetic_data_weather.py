@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 
-num_samples = 35000
+num_samples = 10000000
 num_shards = 50
 
 if __name__ == "__main__":
@@ -30,9 +30,9 @@ if __name__ == "__main__":
     # # Add a new timestamp column to the new_data DataFrame
     end_date = pd.to_datetime(df['dt_iso'].max())
 
-    new_times = pd.date_range(start=end_date,
+    new_times = pd.date_range(start="1980-01-01 00:00:00+01:00",
                               periods=len(df) + num_samples,
-                              freq='1H')
+                              freq='5T')
 
     new_data['dt_iso'] = new_times
 
@@ -41,14 +41,14 @@ if __name__ == "__main__":
     # Make the time column the first column in the dataframe
     new_data = new_data.reindex(columns=['dt_iso'] + [col for col in new_data.columns if col != "dt_iso"])
 
-    new_data = new_data.iloc[1:]
+    # new_data = new_data.iloc[1:]
 
-    final_df = pd.concat([df, new_data])
+    # final_df = pd.concat([df, new_data])
 
     # Save the generated data to a new CSV file
 
     # Split dataframe into shards
-    shards = np.array_split(final_df, num_shards)
+    shards = np.array_split(new_data, num_shards)
 
     for i, shard in enumerate(shards):
         shard_path = os.path.join("./../data/output/weather_features", f"part-{i}")
