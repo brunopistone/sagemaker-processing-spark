@@ -1,10 +1,11 @@
 import argparse
 import logging
 import os
+import pandas as pd
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 from pyspark.sql.types import DoubleType
-import scripts.services.HDFSManager
+from scripts.services.HDFSManager import HDFSManager
 
 BASE_PATH = os.path.join("/", "opt", "ml")
 PROCESSING_PATH = os.path.join(BASE_PATH, "processing")
@@ -16,8 +17,10 @@ logger = logging.getLogger(__name__)
 
 ## Spark Initializer
 #
-spark = SparkSession.builder \
+
+spark  = SparkSession.builder \
     .config("spark.sql.legacy.timeParserPolicy", "CORRECTED") \
+    .config("spark.sql.session.timeZone", "UTC") \
     .getOrCreate()
 
 logger.info("##################")
@@ -37,7 +40,7 @@ if __name__ == '__main__':
 
     logger.info("Arguments: {}".format(args))
     
-    hdfs_manager = scripts.services.HDFSManager.HDFSManager(spark)
+    hdfs_manager = HDFSManager(spark)
     
     ## Move ProcessingInputs to HDFS
     hdfs_manager.copy_full_to_hdfs(PROCESSING_PATH_INPUT)
@@ -74,9 +77,15 @@ if __name__ == '__main__':
         pdf.interpolate(method='linear', limit_direction='forward', inplace=True, axis=0)
         pdf.reset_index(inplace=True)
         return pdf
-    
+
     df_e_p = df_e.toPandas()
     df_e_p = interpolate(df_e_p)
+
+    pandas_version = pd.__version__
+
+    if str(pandas_version).startswith("2."):
+        df_e_p.iteritems = df_e_p.items
+
     df_e = spark.createDataFrame(df_e_p)
     
     logger.info("Shape: ({},{})".format(df_e.count(), len(df_e.columns)))
@@ -112,8 +121,7 @@ if __name__ == '__main__':
     df_w_madrid = df_w_madrid.select([F.col(c).alias(c + "_madrid") for c in df_w_madrid.columns]).drop("city_name_madrid")
     df_w_seville = df_w_seville.select([F.col(c).alias(c + "_seville") for c in df_w_seville.columns]).drop("city_name_seville")
     df_w_valencia = df_w_valencia.select([F.col(c).alias(c + "_valencia") for c in df_w_valencia.columns]).drop("city_name_valencia")
-    
-    
+
     logger.info("Join energy_dataset_df with weather_features_df")
     
     df_e = df_e.join(df_w_barcelona, df_e.time == df_w_barcelona.time_barcelona, how='full').drop("time_barcelona")
@@ -123,6 +131,8 @@ if __name__ == '__main__':
     df_e = df_e.join(df_w_valencia, df_e.time == df_w_valencia.time_valencia, how='full').drop("time_valencia")
     
     logger.info("Writing output file {} to {}".format("energy_full.csv", PROCESSING_PATH_OUTPUT))
-    
+
+    # df_e.write.mode("overwrite").parquet("s3://sagemaker-eu-west-1-691148928602/test/energy_full")
+
     hdfs_manager.save_df(df_e, "energy_full")
     hdfs_manager.copy_from_hdfs(PROCESSING_PATH_OUTPUT, "energy_full")

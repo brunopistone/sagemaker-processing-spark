@@ -2,7 +2,17 @@
 
 ## Prerequisites
 
-Upload data in your bucket
+### 1. Generate syntetic data
+
+```
+python utils/syntetic_data_energy.py
+```
+
+```
+python utils/syntetic_data_weather.py
+```
+
+### 2. Upload data in your bucket
 
 ```
 aws s3 cp ./data/output/* s3://<BUCKET_NAME>/electricity-forecasting/data/input/ --recursive
@@ -70,13 +80,19 @@ Please refer to the official [AWS GitHub repository](https://github.com/aws/sage
 Example:
 
 ```
-aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 571004829621.dkr.ecr.eu-west-1.amazonaws.com/sagemaker-spark-processing:3.1-cpu
+aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin  571004829621.dkr.ecr.eu-west-1.amazonaws.com/sagemaker-spark-processing:3.3-cpu-py39-v1.2
 ```
 
 ### Build custom image
 
 ```
 docker build -t <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:${IMAGE_TAG} -f Dockerfile .
+```
+
+Example:
+
+```
+docker build -t <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/sagemaker-spark-custom-container:latest -f Dockerfile .
 ```
 
 * ACCOUNT_ID: AWS Account ID
@@ -87,6 +103,10 @@ docker build -t <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:$
 ### Push Image to ECR
 
 ```
+aws ecr get-login-password --region <REGION> | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:${IMAGE_TAG} | docker push <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:${IMAGE_TAG}
+```
+
+```
 docker push <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:${IMAGE_TAG}
 ```
 
@@ -94,3 +114,13 @@ docker push <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/${REPOSITORY_NAME}:${IMA
 * REGION: AWS Region
 * REPOSITORY_NAME: ECR Repository name
 * IMAGE_TAG: Tag associated to the image
+
+Example:
+
+```
+aws ecr get-login-password --region <REGION> | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/sagemaker-spark-custom-container:latest
+```
+
+```
+docker push <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/sagemaker-spark-custom-container:latest
+```
