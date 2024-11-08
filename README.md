@@ -15,7 +15,7 @@ python utils/syntetic_data_weather.py
 ### 2. Upload data in your bucket
 
 ```
-aws s3 cp ./data/output/* s3://<BUCKET_NAME>/electricity-forecasting/data/input/ --recursive
+aws s3 sync ./data/output/ s3://<BUCKET_NAME>/electricity-forecasting/data/input/
 ```
 
 ---

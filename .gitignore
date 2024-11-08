@@ -151,3 +151,6 @@ dmypy.json
 */**/locals
 */**/*.egg-info
 */**/default.profraw
+data/output
+*/data/output
+*/**/data/output

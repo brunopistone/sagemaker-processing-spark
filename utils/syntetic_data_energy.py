@@ -1,15 +1,18 @@
 import numpy as np
 import os
 import pandas as pd
+from pathlib import Path
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 
-num_samples = 10000000
+num_samples = 1000000
 num_shards = 50
+
+print(Path(__file__).parent.parent)
 
 if __name__ == "__main__":
     # Load the dataset from the CSV file
-    data = pd.read_csv('./../data/input/energy_dataset.csv')
+    data = pd.read_csv(os.path.join(Path(__file__).parent.parent, "data", "input", "energy_dataset.csv"))
 
     # Extract the input variables and output variable
     X = data.drop(['time', 'price actual'], axis=1) # input variables
@@ -56,6 +59,7 @@ if __name__ == "__main__":
     shards = np.array_split(new_data, num_shards)
 
     for i, shard in enumerate(shards):
-        shard_path = os.path.join("./../data/output/energy_dataset", f"part-{i}")
+        print("Saving...")
+        shard_path = os.path.join(Path(__file__).parent.parent, "data", "output", "energy_dataset", f"part-{i}")
         os.makedirs(shard_path, exist_ok=True)
         shard.to_csv(os.path.join(shard_path, f'part-{i}.csv'), index=False)

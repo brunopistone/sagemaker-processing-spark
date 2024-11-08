@@ -1,13 +1,14 @@
 import os
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
-num_samples = 10000000
+num_samples = 1000000
 num_shards = 50
 
 if __name__ == "__main__":
     # Load the CSV file into a DataFrame
-    df = pd.read_csv('./../data/input/weather_features.csv')
+    df = pd.read_csv(os.path.join(Path(__file__).parent.parent, "data", "input", "weather_features.csv"))
 
     X = df.drop(['dt_iso'], axis=1)  # input variables
 
@@ -51,6 +52,6 @@ if __name__ == "__main__":
     shards = np.array_split(new_data, num_shards)
 
     for i, shard in enumerate(shards):
-        shard_path = os.path.join("./../data/output/weather_features", f"part-{i}")
+        shard_path = os.path.join(Path(__file__).parent.parent, "data", "output", "weather_features", f"part-{i}")
         os.makedirs(shard_path, exist_ok=True)
         shard.to_csv(os.path.join(shard_path, f'part-{i}.csv'), index=False)
