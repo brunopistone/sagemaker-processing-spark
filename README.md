@@ -1,4 +1,4 @@
-# Deminstified Sagemaker Processing Job with Spark
+# Deminstified Sagemaker Jobs with Spark
 
 ## Prerequisites
 
