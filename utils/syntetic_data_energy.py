@@ -59,7 +59,8 @@ if __name__ == "__main__":
     shards = np.array_split(new_data, num_shards)
 
     for i, shard in enumerate(shards):
-        print("Saving...")
+        print(f"\rSaving shard {i+1}/{num_shards}...", end='', flush=True)
         shard_path = os.path.join(Path(__file__).parent.parent, "data", "output", "energy_dataset", f"part-{i}")
         os.makedirs(shard_path, exist_ok=True)
         shard.to_csv(os.path.join(shard_path, f'part-{i}.csv'), index=False)
+    print("\nDone!")
