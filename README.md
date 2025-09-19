@@ -1,4 +1,4 @@
-# Deminstified Sagemaker Jobs with Spark
+# Deminstified Sagemaker Jobs with Spark container
 
 ## HDFSManager
 
