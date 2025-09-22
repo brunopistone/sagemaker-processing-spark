@@ -10,7 +10,7 @@ if os.environ.get("IS_TRAINING_JOB", "").lower() == "true":
     from services.HDFSManager import HDFSManager
 
     PROCESSING_PATH_INPUT = os.environ.get("SM_CHANNEL_INPUT", None)
-    PROCESSING_PATH_OUTPUT = os.path.join("SM_OUTPUT_DIR", "/opt/ml/output/data")
+    PROCESSING_PATH_OUTPUT = os.environ.get("SM_OUTPUT_DIR", "/opt/ml/output/data")
 else:
     from scripts.services.HDFSManager import HDFSManager
 
