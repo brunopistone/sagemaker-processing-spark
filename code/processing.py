@@ -181,7 +181,5 @@ if __name__ == "__main__":
         "Writing output file {} to {}".format("energy_full.csv", PROCESSING_PATH_OUTPUT)
     )
 
-    # df_e.write.mode("overwrite").parquet("s3://sagemaker-eu-west-1-691148928602/test/energy_full")
-
     hdfs_manager.save_df(df_e, "energy_full")
     hdfs_manager.copy_from_hdfs(PROCESSING_PATH_OUTPUT, "energy_full")
